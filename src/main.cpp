@@ -4,6 +4,9 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <Firebase_ESP_Client.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+#include <string>
 
 // Provide the token generation process info.
 #include <addons/TokenHelper.h>
@@ -19,12 +22,16 @@
 #define PH_SENSOR 36
 #define TURBIDITY 35
 
-#define WIFI_SSID "Wijaya 1A"
-#define WIFI_PASSWORD "wijayahebat"
+#define WIFI_SSID "JORDANO 8600"
+#define WIFI_PASSWORD "12345678"
 
+#define FIREBASE_ID "skm-kakoi-rtdb"
 #define API_KEY "AIzaSyCgq5luz_flyabS8u-am327XvnDxiZN0ew"
 #define DATABASE_URL "https://skm-kakoi-rtdb-default-rtdb.asia-southeast1.firebasedatabase.app/" //<databaseName>.firebaseio.com or <databaseName>.<region>.firebasedatabase.app
 
+const long utcOffsetInSeconds = 7 * 3600;
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
 // Define Firebase Data object
 FirebaseData fbdo;
@@ -34,10 +41,16 @@ FirebaseConfig config;
 unsigned long sendDataPrevMillis = 0;
 bool signupOK = false;
 
+String DEVICE_UID = "1X";
+String temp_RTDB_node = DEVICE_UID + "/suhu";
+String NTU_RTDB_node = DEVICE_UID + "/NTU";
+String ph_RTDB_node = DEVICE_UID + "/ph";
 
 int relay[4] = {17, 23, 18, 19};
 float waterTemp;
 float waterNTU;
+float waterPH;
+bool FirestoreState = false;
 
 OneWire oneWire(TEMP_SENSOR);
 DallasTemperature ds18b20(&oneWire);
@@ -49,14 +62,13 @@ float turbidityRead();
 void setup()
 {
   Serial.begin(115200);
-  // put your setup code here, to run once:
   relaySetup();
   pinMode(TURBIDITY, INPUT);
   ds18b20.begin();
-
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to Wi-Fi");
-  while (WiFi.status() != WL_CONNECTED){
+  while (WiFi.status() != WL_CONNECTED)
+  {
     Serial.print(".");
     delay(300);
   }
@@ -64,6 +76,7 @@ void setup()
   Serial.print("Connected with IP: ");
   Serial.println(WiFi.localIP());
   Serial.println();
+  timeClient.begin();
 
   /* Assign the api key (required) */
   config.api_key = API_KEY;
@@ -72,47 +85,105 @@ void setup()
   config.database_url = DATABASE_URL;
 
   /* Sign up */
-  if (Firebase.signUp(&config, &auth, "", "")){
+  if (Firebase.signUp(&config, &auth, "", ""))
+  {
     Serial.println("ok");
     signupOK = true;
   }
-  else{
+  else
+  {
     Serial.printf("%s\n", config.signer.signupError.message.c_str());
   }
 
   /* Assign the callback function for the long running token generation task */
-  config.token_status_callback = tokenStatusCallback; //see addons/TokenHelper.h
-  
+  config.token_status_callback = tokenStatusCallback; // see addons/TokenHelper.h
+
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
 }
 
 void loop()
 {
-  // put yo ur main code here, to run repeatedly:
 
-  if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)){
+  timeClient.update();
+  // Serial.println(timeClient.getFormattedTime());
+  // Serial.println(timeClient.getEpochTime());
+
+  if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0))
+  {
     waterTemp = tempRead();
     waterNTU = turbidityRead();
     sendDataPrevMillis = millis();
 
-    if (Firebase.RTDB.setFloat(&fbdo, "/paramreal/suhu", waterTemp)){
+    // RTDB
+    if (Firebase.RTDB.setFloat(&fbdo, temp_RTDB_node.c_str(), waterTemp))
+    {
       Serial.println("PASSED");
-      Serial.print("PATH: "); Serial.println(fbdo.dataPath());
-      Serial.println("TYPE: "); Serial.println(fbdo.dataType());
+      Serial.print("PATH: ");
+      Serial.println(fbdo.dataPath());
+      Serial.print("TYPE: ");
+      Serial.println(fbdo.dataType());
     }
-    else {
+    else
+    {
       Serial.println("FAILED");
-      Serial.print("REASON: "); Serial.println(fbdo.errorReason());
+      Serial.print("REASON: ");
+      Serial.println(fbdo.errorReason());
     }
-    if (Firebase.RTDB.setFloat(&fbdo, "/paramreal/kekeruhan", waterNTU)){
+    if (Firebase.RTDB.setFloat(&fbdo, NTU_RTDB_node.c_str(), waterNTU))
+    {
       Serial.println("PASSED");
-      Serial.print("PATH: "); Serial.println(fbdo.dataPath());
-      Serial.println("TYPE: "); Serial.println(fbdo.dataType());
+      Serial.print("PATH: ");
+      Serial.println(fbdo.dataPath());
+      Serial.print("TYPE: ");
+      Serial.println(fbdo.dataType());
     }
-    else {
+    else
+    {
       Serial.println("FAILED");
-      Serial.print("REASON: "); Serial.println(fbdo.errorReason());
+      Serial.print("REASON: ");
+      Serial.println(fbdo.errorReason());
+    }
+
+    // Firestore
+    FirebaseJson tempContent;
+    FirebaseJson NTUContent;
+
+    String documentPath = "device/" + DEVICE_UID;
+
+    String temp_FS_path = documentPath + "/temp/" + String(timeClient.getEpochTime());
+    String NTU_FS_path = documentPath + "/turbid/" + String(timeClient.getEpochTime());
+    String ph_FS_path = documentPath + "/ph/" + String(timeClient.getEpochTime());
+
+    String fields = "fields/value/doubleValue";
+
+    tempContent.set(fields, String(waterTemp));
+    NTUContent.set(fields, String(waterNTU));
+
+    if (FirestoreState == false && (timeClient.getMinutes() == 30 || timeClient.getMinutes() == 0))
+    {
+      FirestoreState = true;
+      if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "" /* databaseId can be (default) or empty */, temp_FS_path.c_str(), tempContent.raw()))
+      {
+        Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+      }
+      else
+      {
+        Serial.println(fbdo.errorReason());
+      }
+
+      if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "" /* databaseId can be (default) or empty */, NTU_FS_path.c_str(), NTUContent.raw()))
+      {
+        Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+      }
+      else
+      {
+        Serial.println(fbdo.errorReason());
+      }
+    }
+    else if(timeClient.getMinutes() == 31 || timeClient.getMinutes() == 1)
+    {
+      FirestoreState = false;
     }
   }
 }
@@ -139,12 +210,17 @@ float tempRead()
 
 float turbidityRead()
 {
-  float voltage = analogRead(TURBIDITY) * 3.3 / (4096);
+  float ADC = analogRead(TURBIDITY);
+  float voltage = ADC * 3.3 / (4096);
   float NTU = (-2572.2 * voltage * voltage) + (8700.5 * voltage) - 4352.9;
-  // Serial.print("Water NTU is: ");
-  // Serial.println(NTU);
+  Serial.print("ADC is: ");
+  Serial.println(ADC);
   Serial.print("Voltage is: ");
   Serial.println(voltage);
+  if (NTU < 0)
+  {
+    NTU = -1;
+  }
   return NTU;
 }
 
@@ -163,38 +239,4 @@ void relaySetup()
     digitalWrite(relay[i], LOW);
     delay(100);
   }
-  // delay(500);
-  // for (int i = 3; i >= 0; i--)
-  // {
-  //   digitalWrite(relay[i], HIGH);
-  //   delay(50);
-  //   digitalWrite(relay[i], LOW);
-  // }
-  // delay(200);
-  // for (int i = 0; i < 4; i++)
-  // {
-  //   digitalWrite(relay[i], HIGH);
-  //   delay(50);
-  //   digitalWrite(relay[i], LOW);
-  // }
-  // delay(1000);
-  // for (int i = 0; i < 4; i++)
-  // {
-  //   digitalWrite(relay[i], HIGH);
-  // }
-  // delay(500);
-  // for (int i = 0; i < 4; i++)
-  // {
-  //   digitalWrite(relay[i], LOW);
-  // }
-  // delay(500);
-  // for (int i = 0; i < 4; i++)
-  // {
-  //   digitalWrite(relay[i], HIGH);
-  // }
-  // delay(500);
-  // for (int i = 0; i < 4; i++)
-  // {
-  //   digitalWrite(relay[i], LOW);
-  // }
 };
