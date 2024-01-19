@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <BluetoothSerial.h>
 #include <Preferences.h>
+#include "deviceUID.hpp"
 
 const long wifiTimeout = 15000;  // 30 seconds
 unsigned long startTime;
@@ -35,7 +36,7 @@ void connectToWiFi() {
 }
 
 void configureWiFiWithBluetooth() {
-  SerialBT.begin("ESP32_BT");
+  SerialBT.begin(DEVICE_IDENTIFIER);
   while (1) {
     if (SerialBT.available()) {
       SerialBT.println("Please enter new WiFi credentials in the format: SSID,password");

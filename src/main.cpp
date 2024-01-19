@@ -36,8 +36,8 @@ void setup()
 void loop()
 {
 
-  waterTemp = readTemperature();
-  waterNTU = readTurbidity();
+  // waterTemp = readTemperature();
+  // waterNTU = readTurbidity();
 
 
   if (millis() - controlPrevMillis >= 15000 || controlPrevMillis == 0)
@@ -57,7 +57,7 @@ void loop()
     Serial.println(waterMinPH);
     Serial.println(waterMaxPH);
     Serial.println(waterAutoPH);
-    fuzzyControl(16, 10, waterMinTemp, waterMaxTemp, waterAutoTemp, waterMinPH, waterMaxPH, waterAutoPH);
+    fuzzyControl(45, 7, waterMinTemp, waterMaxTemp, waterAutoTemp, waterMinPH, waterMaxPH, waterAutoPH);
 
   }
 

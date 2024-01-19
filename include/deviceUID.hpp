@@ -1,6 +1,6 @@
 #ifndef DEVICE_IDENTIFIER_H
 #define DEVICE_IDENTIFIER_H
 
-#define DEVICE_IDENTIFIER "2X" ;
+#define DEVICE_IDENTIFIER "KAKOI_2X"
 
 #endif
