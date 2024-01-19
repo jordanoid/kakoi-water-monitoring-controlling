@@ -1,0 +1,6 @@
+#ifndef DEVICE_IDENTIFIER_H
+#define DEVICE_IDENTIFIER_H
+
+#define DEVICE_IDENTIFIER "2X" ;
+
+#endif

@@ -1,8 +1,9 @@
 #include "FirebaseFunctions.hpp"
+#include "deviceUID.hpp"
 #include <Firebase_ESP_Client.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
-#include <string>
+#include <Arduino.h>
 
 // Provide the token generation process info.
 #include <addons/TokenHelper.h>
@@ -14,6 +15,9 @@
 #define API_KEY "AIzaSyCgq5luz_flyabS8u-am327XvnDxiZN0ew"
 #define DATABASE_URL "https://skm-kakoi-rtdb-default-rtdb.asia-southeast1.firebasedatabase.app/" //<databaseName>.firebaseio.com or <databaseName>.<region>.firebasedatabase.app
 
+#define USER_EMAIL "skmkakoi@test.com"
+#define USER_PASS "skmkakoi"
+
 const long utcOffsetInSeconds = 7 * 3600;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
@@ -23,15 +27,31 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
-unsigned long sendDataPrevMillis = 0;
-bool signupOK = false;
-
-String DEVICE_UID = "1X";
+String DEVICE_UID = DEVICE_IDENTIFIER;
 String temp_RTDB_node = DEVICE_UID + "/suhu";
 String NTU_RTDB_node = DEVICE_UID + "/NTU";
 String ph_RTDB_node = DEVICE_UID + "/ph";
-bool FirestoreState = false;
 
+String tempControl_RTDB_node = DEVICE_UID + "/auto_suhu";
+String minTemp_RTDB_node = DEVICE_UID + "/suhu_min";
+String maxTemp_RTDB_node = DEVICE_UID + "/suhu_max";
+
+String PHControl_RTDB_node = DEVICE_UID + "/auto_PH";
+String minPH_RTDB_node = DEVICE_UID + "/PH_min";
+String maxPH_RTDB_node = DEVICE_UID + "/PH_max";
+
+FirebaseJson tempContent;
+FirebaseJson PHContent;
+FirebaseJson NTUContent;
+
+String documentPath = "device/" + DEVICE_UID + "/log";
+
+String temp_FS_path = documentPath + "/temp";
+String NTU_FS_path = documentPath + "/turbid";
+String ph_FS_path = documentPath + "/ph";
+String fields;
+
+bool FirestoreState = false;
 
 void FirebaseSetup()
 {
@@ -44,15 +64,8 @@ void FirebaseSetup()
     config.database_url = DATABASE_URL;
 
     /* Sign up */
-    if (Firebase.signUp(&config, &auth, "", ""))
-    {
-        Serial.println("ok");
-        signupOK = true;
-    }
-    else
-    {
-        Serial.printf("%s\n", config.signer.signupError.message.c_str());
-    }
+    auth.user.email = USER_EMAIL;
+    auth.user.password = USER_PASS;
 
     /* Assign the callback function for the long running token generation task */
     config.token_status_callback = tokenStatusCallback; // see addons/TokenHelper.h
@@ -61,20 +74,27 @@ void FirebaseSetup()
     Firebase.reconnectWiFi(true);
 }
 
+/*
+
+RTDB Send Function
+
+*/
+
 void RTDBSend(float waterTemp, float waterNTU)
 {
-    if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0))
+    // if (Firebase.ready() && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0))
+    if (Firebase.ready())
     {
-        sendDataPrevMillis = millis();
+        // sendDataPrevMillis = millis();
 
         // RTDB
         if (Firebase.RTDB.setFloat(&fbdo, temp_RTDB_node.c_str(), waterTemp))
         {
             Serial.println("PASSED");
-            Serial.print("PATH: ");
-            Serial.println(fbdo.dataPath());
-            Serial.print("TYPE: ");
-            Serial.println(fbdo.dataType());
+            // Serial.print("PATH: ");
+            // Serial.println(fbdo.dataPath());
+            // Serial.print("TYPE: ");
+            // Serial.println(fbdo.dataType());
         }
         else
         {
@@ -85,10 +105,10 @@ void RTDBSend(float waterTemp, float waterNTU)
         if (Firebase.RTDB.setFloat(&fbdo, NTU_RTDB_node.c_str(), waterNTU))
         {
             Serial.println("PASSED");
-            Serial.print("PATH: ");
-            Serial.println(fbdo.dataPath());
-            Serial.print("TYPE: ");
-            Serial.println(fbdo.dataType());
+            // Serial.print("PATH: ");
+            // Serial.println(fbdo.dataPath());
+            // Serial.print("TYPE: ");
+            // Serial.println(fbdo.dataType());
         }
         else
         {
@@ -99,48 +119,242 @@ void RTDBSend(float waterTemp, float waterNTU)
     }
 }
 
+/*
+
+RTDB Get Temp Function
+
+*/
+
+float getMaxTemp()
+{
+    if (Firebase.ready())
+    {
+        if (Firebase.RTDB.getFloat(&fbdo, maxTemp_RTDB_node.c_str()))
+        {
+            if (fbdo.dataType() == "float")
+            {
+                return fbdo.floatData();
+            }
+            else
+            {
+                return float(fbdo.floatData());
+            }
+        }
+        else
+        {
+            Serial.println(fbdo.errorReason());
+            return -1;
+        }
+    }
+
+    return -1;
+}
+
+float getMinTemp()
+{
+    if (Firebase.ready())
+    {
+        if (Firebase.RTDB.getFloat(&fbdo, minTemp_RTDB_node.c_str()))
+        {
+            if (fbdo.dataType() == "float")
+            {
+                return fbdo.floatData();
+            }
+            else
+            {
+                return float(fbdo.floatData());
+            }
+        }
+        else
+        {
+            Serial.println(fbdo.errorReason());
+            return -1;
+        }
+    }
+
+    return -1;
+}
+
+bool getAutoTemp()
+{
+    if (Firebase.ready())
+    {
+        if (Firebase.RTDB.getBool(&fbdo, tempControl_RTDB_node.c_str()))
+        {
+            if (fbdo.dataType() == "bool")
+            {
+                return fbdo.boolData();
+            }
+            {
+                return bool(fbdo.boolData());
+            }
+        }
+        else
+        {
+            Serial.println(fbdo.errorReason());
+            return false;
+        }
+    }
+
+    return false;
+}
+
+/*
+
+RTDB Get PH Function
+
+*/
+
+float getMaxPH()
+{
+    if (Firebase.ready())
+    {
+        if (Firebase.RTDB.getFloat(&fbdo, maxPH_RTDB_node.c_str()))
+        {
+            if (fbdo.dataType() == "float")
+            {
+                return fbdo.floatData();
+            }
+            else
+            {
+                return float(fbdo.floatData());
+            }
+        }
+        else
+        {
+            Serial.println(fbdo.errorReason());
+            return -1;
+        }
+    }
+
+    return -1;
+}
+
+float getMinPH()
+{
+    if (Firebase.ready())
+    {
+        if (Firebase.RTDB.getFloat(&fbdo, minPH_RTDB_node.c_str()))
+        {
+            if (fbdo.dataType() == "float")
+            {
+                return fbdo.floatData();
+            }
+            else
+            {
+                return float(fbdo.floatData());
+            }
+        }
+        else
+        {
+            Serial.println(fbdo.errorReason());
+            return -1;
+        }
+    }
+
+    return -1;
+}
+
+bool getAutoPH()
+{
+    if (Firebase.ready())
+    {
+        if (Firebase.RTDB.getBool(&fbdo, PHControl_RTDB_node.c_str()))
+        {
+            if (fbdo.dataType() == "bool")
+            {
+                return fbdo.boolData();
+            }
+            else
+            {
+                return bool(fbdo.boolData());
+            }
+        }
+        else
+        {
+            Serial.println(fbdo.errorReason());
+            return false;
+        }
+    }
+
+    return false;
+}
+
+/*
+
+Firestore Function
+
+*/
+
 void FirestoreSend(float waterTemp, float waterNTU)
 {
     timeClient.update();
 
-    if (Firebase.ready() && signupOK)
+    String epoch = "E" + String(timeClient.getEpochTime());
+    fields = "fields/" + epoch + "/doubleValue";
+
+    if (Firebase.ready())
     {
-        FirebaseJson tempContent;
-        FirebaseJson NTUContent;
 
-        String documentPath = "device/" + DEVICE_UID;
-
-        String temp_FS_path = documentPath + "/temp/" + String(timeClient.getEpochTime());
-        String NTU_FS_path = documentPath + "/turbid/" + String(timeClient.getEpochTime());
-        String ph_FS_path = documentPath + "/ph/" + String(timeClient.getEpochTime());
-
-        String fields = "fields/value/doubleValue";
-
-        tempContent.set(fields, String(waterTemp));
-        NTUContent.set(fields, String(waterNTU));
-
-        if (FirestoreState == false && (timeClient.getMinutes() == 30 || timeClient.getMinutes() == 0))
+        tempContent.clear();
+        // PHContent.clear();
+        NTUContent.clear();
+        if (FirestoreState == false && (timeClient.getMinutes() == 0))
         {
-            FirestoreState = true;
-            if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "" /* databaseId can be (default) or empty */, temp_FS_path.c_str(), tempContent.raw()))
+
+            if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str()))
             {
-                Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+                tempContent.set(fields.c_str(), std::to_string(waterTemp).c_str());
+                if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str(), tempContent.raw()))
+                {
+                    Serial.printf("Temperature Document created: %s\n", temp_FS_path.c_str());
+                }
+                else
+                {
+                    Serial.println(fbdo.errorReason());
+                }
             }
             else
             {
-                Serial.println(fbdo.errorReason());
+                tempContent.set(fields, std::to_string(waterTemp).c_str());
+                if (Firebase.Firestore.patchDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str(), tempContent.raw(), epoch))
+                {
+                    // Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+                }
+                else
+                {
+                    Serial.println(fbdo.errorReason());
+                }
             }
 
-            if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "" /* databaseId can be (default) or empty */, NTU_FS_path.c_str(), NTUContent.raw()))
+            if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str()))
             {
-                Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+                NTUContent.set(fields.c_str(), std::to_string(waterNTU).c_str());
+                if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str(), NTUContent.raw()))
+                {
+                    Serial.printf("NTU Document created: %s\n", NTU_FS_path.c_str());
+                }
+                else
+                {
+                    Serial.println(fbdo.errorReason());
+                }
             }
             else
             {
-                Serial.println(fbdo.errorReason());
+                NTUContent.set(fields, std::to_string(waterNTU).c_str());
+                if (Firebase.Firestore.patchDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str(), NTUContent.raw(), epoch))
+                {
+                    // Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+                }
+                else
+                {
+                    Serial.println(fbdo.errorReason());
+                }
             }
+
+            FirestoreState = true;
         }
-        else if (timeClient.getMinutes() == 31 || timeClient.getMinutes() == 1)
+        else if (timeClient.getMinutes() == 1)
         {
             FirestoreState = false;
         }

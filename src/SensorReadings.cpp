@@ -1,6 +1,8 @@
 #include "SensorReadings.hpp"
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <Arduino.h>
+
 
 #define TEMP_SENSOR 27
 #define PH_SENSOR 36
@@ -11,9 +13,9 @@ DallasTemperature ds18b20(&oneWire);
 
 float readTemperature()
 {
-    Serial.print("Requesting temperatures...");
+    // Serial.print("Requesting temperatures...");
     ds18b20.requestTemperatures();
-    Serial.println("DONE");
+    // Serial.println("DONE");
     float tempC = ds18b20.getTempCByIndex(0);
 
     if (tempC != DEVICE_DISCONNECTED_C)
@@ -33,9 +35,9 @@ float readTurbidity()
 {
     float ADC = analogRead(TURBIDITY);
     float voltage = ADC * 3.3 / 4096;
-    float NTU = (-2572.2 * voltage * voltage) + (8700.5 * voltage) - 4352.9;
-    Serial.print("ADC is: ");
-    Serial.println(ADC);
+    float NTU = (-6539.8 * voltage) + 10475;
+    Serial.print("NTU: ");
+    Serial.println(NTU);
     Serial.print("Voltage is: ");
     Serial.println(voltage);
     if (NTU < 0)
@@ -49,10 +51,10 @@ float readTurbidity()
     
 }
 
-float readPH()
-{
+// float readPH()
+// {
     
-}
+// }
 
 void sensorSetup()
 {

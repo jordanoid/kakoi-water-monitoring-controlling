@@ -2,63 +2,73 @@
 #include <WiFi.h>
 #include "FirebaseFunctions.hpp"
 #include "SensorReadings.hpp"
+#include "FuzzyControl.hpp"
+#include "connectionSetup.hpp"
 
 #define PHUP 17
 #define PHDOWN 23
 #define PELT 18
 #define HEATER 19
 
-#define WIFI_SSID "JORDANO 8600"
-#define WIFI_PASSWORD "12345678"
-
-int relay[4] = {17, 23, 18, 19};
 float waterTemp;
 float waterNTU;
 float waterPH;
+float waterMinTemp;
+float waterMaxTemp;
+bool waterAutoTemp;
+float waterMinPH;
+float waterMaxPH;
+bool waterAutoPH;
+bool getControlData = false;
 
-void relaySetup();
+unsigned long sendDataPrevMillis = 0;
+unsigned long controlPrevMillis = 0;
 
 void setup()
 {
   Serial.begin(115200);
-  relaySetup();
+  connectionSetup();
+  controllerSetup();
   sensorSetup();
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to Wi-Fi");
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.print(".");
-    delay(300);
-  }
-  Serial.println();
-  Serial.print("Connected with IP: ");
-  Serial.println(WiFi.localIP());
-  Serial.println();
   FirebaseSetup();
-  
 }
 
 void loop()
 {
+
   waterTemp = readTemperature();
   waterNTU = readTurbidity();
-  RTDBSend(waterTemp, waterNTU);
-  FirestoreSend(waterTemp, waterNTU);
-}
 
-void relaySetup()
-{
-  for (int i = 0; i < 4; i++)
-    pinMode(relay[i], OUTPUT);
-  for (int i = 0; i < 4; i++)
+
+  if (millis() - controlPrevMillis >= 15000 || controlPrevMillis == 0)
   {
-    digitalWrite(relay[i], HIGH);
-    delay(100);
+    controlPrevMillis = millis();
+    getControlData = true;
+    Serial.println("Control Data");
+    waterMinTemp = getMinTemp();
+    waterMaxTemp = getMaxTemp();
+    waterAutoTemp = getAutoTemp();
+    waterMinPH = getMinPH();
+    waterMaxPH = getMaxPH();
+    waterAutoPH = getAutoPH();
+    Serial.println(waterMinTemp);
+    Serial.println(waterMaxTemp);
+    Serial.println(waterAutoTemp);
+    Serial.println(waterMinPH);
+    Serial.println(waterMaxPH);
+    Serial.println(waterAutoPH);
+    fuzzyControl(16, 10, waterMinTemp, waterMaxTemp, waterAutoTemp, waterMinPH, waterMaxPH, waterAutoPH);
+
   }
-  delay(500);
-  for (int i = 0; i < 4; i++)
+
+  if (millis() - sendDataPrevMillis >= 2000 || sendDataPrevMillis == 0 && getControlData == false)
   {
-    digitalWrite(relay[i], LOW);
-    delay(100);
+    sendDataPrevMillis = millis();
+    RTDBSend(waterTemp, waterNTU);
+    FirestoreSend(waterTemp, waterNTU);
+    Serial.print("Free Heap : ");
+    Serial.println(ESP.getFreeHeap());
   }
-};
+  
+  getControlData = false;
+}
