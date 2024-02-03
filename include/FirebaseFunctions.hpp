@@ -2,8 +2,8 @@
 #define FIREBASE_FUNCTIONS_HPP
 
 void FirebaseSetup();
-void RTDBSend(float waterTemp, float waterNTU);
-void FirestoreSend(float waterTemp, float waterNTU);
+void RTDBSend(float waterTemp, float waterNTU, float waterPH);
+void FirestoreSend(float waterTemp, float waterNTU, float waterPH);
 
 float getMinTemp();
 float getMaxTemp();

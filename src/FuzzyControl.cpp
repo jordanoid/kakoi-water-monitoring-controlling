@@ -21,6 +21,12 @@ FIS_TYPE g_fisOutput[fis_gcO];
 
 int relay[4] = {17, 23, 18, 19};
 
+unsigned long controlPreviousTime = 0;
+const unsigned long controlInterval = 60000; // 60 seconds
+const unsigned long phPumpDuration = 5000;     // 5 seconds
+bool phPumpRunning = false;
+unsigned long phPumpStartTime = 0;
+
 //***********************************************************************
 // Support functions for Fuzzy Inference System
 //***********************************************************************
@@ -280,7 +286,7 @@ void controllerSetup()
     for (int i = 0; i < 4; i++)
     {
         digitalWrite(relay[i], HIGH);
-        delay(100);
+        delay(1000);
     }
     delay(500);
     for (int i = 0; i < 4; i++)
@@ -290,7 +296,6 @@ void controllerSetup()
     }
 }
 
-// Loop routine runs over and over again forever:
 void fuzzyControl(float currentTemp, float currentPH, float minTemp, float maxTemp, bool autoTemp, float minPH, float maxPH, bool autoPH)
 {
     // Read Input: suhu
@@ -376,6 +381,7 @@ void fuzzyControl(float currentTemp, float currentPH, float minTemp, float maxTe
             digitalWrite(relay[2], LOW);
             digitalWrite(relay[3], LOW);
         }
+
     }
     else
     {
@@ -383,29 +389,39 @@ void fuzzyControl(float currentTemp, float currentPH, float minTemp, float maxTe
         digitalWrite(relay[3], LOW);
     }
 
-    if (autoPH == 1)
-    {
-        if (g_fisOutput[2] >= 0.5 && g_fisOutput[3] < 0.5)
-        {
+    
+    unsigned long currentTime = millis();
+
+    if (autoPH == 1 && (currentTime - controlPreviousTime >= controlInterval)) {
+        // Update the last control time
+        controlPreviousTime = currentTime;
+
+        // Control
+        if (g_fisOutput[2] >= 0.5 && g_fisOutput[3] < 0.5) {
+            // Turn on pH up Pump
             digitalWrite(relay[0], HIGH);
             digitalWrite(relay[1], LOW);
-        }
-        else if (g_fisOutput[3] >= 0.5 && g_fisOutput[2] < 0.5)
-        {
+            phPumpRunning = true;
+            phPumpStartTime = currentTime;
+        } else if (g_fisOutput[3] >= 0.5 && g_fisOutput[2] < 0.5) {
+            // Turn on pH downhPump
             digitalWrite(relay[0], LOW);
             digitalWrite(relay[1], HIGH);
-        }
-        else
-        {
+            phPumpRunning = true;
+            phPumpStartTime = currentTime;
+        } else {
             digitalWrite(relay[0], LOW);
             digitalWrite(relay[1], LOW);
         }
     }
-    else
-    {
+
+    // Check if the Pump is running and the Pump duration has passed
+    if (phPumpRunning && (currentTime - phPumpStartTime >= phPumpDuration)) {
         digitalWrite(relay[0], LOW);
         digitalWrite(relay[1], LOW);
+        phPumpRunning = false;
     }
+
 
     // // Set output vlaue: heater
     // analogWrite(2, g_fisOutput[0]);

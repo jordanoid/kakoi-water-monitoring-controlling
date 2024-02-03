@@ -30,7 +30,7 @@ FirebaseConfig config;
 String DEVICE_UID = DEVICE_IDENTIFIER;
 String temp_RTDB_node = DEVICE_UID + "/suhu";
 String NTU_RTDB_node = DEVICE_UID + "/NTU";
-String ph_RTDB_node = DEVICE_UID + "/ph";
+String PH_RTDB_node = DEVICE_UID + "/ph";
 
 String tempControl_RTDB_node = DEVICE_UID + "/auto_suhu";
 String minTemp_RTDB_node = DEVICE_UID + "/suhu_min";
@@ -48,7 +48,7 @@ String documentPath = "device/" + DEVICE_UID + "/log";
 
 String temp_FS_path = documentPath + "/temp";
 String NTU_FS_path = documentPath + "/turbid";
-String ph_FS_path = documentPath + "/ph";
+String PH_FS_path = documentPath + "/ph";
 String fields;
 
 bool FirestoreState = false;
@@ -80,7 +80,7 @@ RTDB Send Function
 
 */
 
-void RTDBSend(float waterTemp, float waterNTU)
+void RTDBSend(float waterTemp, float waterNTU, float waterPH)
 {
     // if (Firebase.ready() && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0))
     if (Firebase.ready())
@@ -103,6 +103,21 @@ void RTDBSend(float waterTemp, float waterNTU)
             Serial.println(fbdo.errorReason());
         }
         if (Firebase.RTDB.setFloat(&fbdo, NTU_RTDB_node.c_str(), waterNTU))
+        {
+            Serial.println("PASSED");
+            // Serial.print("PATH: ");
+            // Serial.println(fbdo.dataPath());
+            // Serial.print("TYPE: ");
+            // Serial.println(fbdo.dataType());
+        }
+        else
+        {
+            Serial.println("FAILED");
+            Serial.print("REASON: ");
+            Serial.println(fbdo.errorReason());
+        }
+
+        if (Firebase.RTDB.setFloat(&fbdo, PH_RTDB_node.c_str(), waterPH))
         {
             Serial.println("PASSED");
             // Serial.print("PATH: ");
@@ -286,7 +301,7 @@ Firestore Function
 
 */
 
-void FirestoreSend(float waterTemp, float waterNTU)
+void FirestoreSend(float waterTemp, float waterNTU, float waterPH)
 {
     timeClient.update();
 
@@ -297,58 +312,91 @@ void FirestoreSend(float waterTemp, float waterNTU)
     {
 
         tempContent.clear();
-        // PHContent.clear();
+        PHContent.clear();
         NTUContent.clear();
         if (FirestoreState == false && (timeClient.getMinutes() == 0))
         {
+            if (waterTemp != -1)
+            {
+                if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str()))
+                {
+                    tempContent.set(fields.c_str(), String(waterTemp));
+                    if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str(), tempContent.raw()))
+                    {
+                        Serial.printf("Temperature Document created: %s\n", temp_FS_path.c_str());
+                    }
+                    else
+                    {
+                        Serial.println(fbdo.errorReason());
+                    }
+                }
+                else
+                {
+                    tempContent.set(fields, String(waterTemp));
+                    if (Firebase.Firestore.patchDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str(), tempContent.raw(), epoch))
+                    {
+                        // Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+                    }
+                    else
+                    {
+                        Serial.println(fbdo.errorReason());
+                    }
+                }
+            }
 
-            if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str()))
+            if (waterNTU != -1)
             {
-                tempContent.set(fields.c_str(), std::to_string(waterTemp).c_str());
-                if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str(), tempContent.raw()))
+                if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str()))
                 {
-                    Serial.printf("Temperature Document created: %s\n", temp_FS_path.c_str());
+                    NTUContent.set(fields.c_str(), String(waterNTU));
+                    if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str(), NTUContent.raw()))
+                    {
+                        Serial.printf("NTU Document created: %s\n", NTU_FS_path.c_str());
+                    }
+                    else
+                    {
+                        Serial.println(fbdo.errorReason());
+                    }
                 }
                 else
                 {
-                    Serial.println(fbdo.errorReason());
-                }
-            }
-            else
-            {
-                tempContent.set(fields, std::to_string(waterTemp).c_str());
-                if (Firebase.Firestore.patchDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str(), tempContent.raw(), epoch))
-                {
-                    // Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
-                }
-                else
-                {
-                    Serial.println(fbdo.errorReason());
+                    NTUContent.set(fields, String(waterNTU));
+                    if (Firebase.Firestore.patchDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str(), NTUContent.raw(), epoch))
+                    {
+                        // Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+                    }
+                    else
+                    {
+                        Serial.println(fbdo.errorReason());
+                    }
                 }
             }
 
-            if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str()))
+            if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_ID, "", PH_FS_path.c_str()))
             {
-                NTUContent.set(fields.c_str(), std::to_string(waterNTU).c_str());
-                if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str(), NTUContent.raw()))
+                if (waterPH != -1)
                 {
-                    Serial.printf("NTU Document created: %s\n", NTU_FS_path.c_str());
+                    PHContent.set(fields.c_str(), String(waterPH));
+                    if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", PH_FS_path.c_str(), PHContent.raw()))
+                    {
+                        Serial.printf("PH Document created: %s\n", PH_FS_path.c_str());
+                    }
+                    else
+                    {
+                        Serial.println(fbdo.errorReason());
+                    }
                 }
                 else
                 {
-                    Serial.println(fbdo.errorReason());
-                }
-            }
-            else
-            {
-                NTUContent.set(fields, std::to_string(waterNTU).c_str());
-                if (Firebase.Firestore.patchDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str(), NTUContent.raw(), epoch))
-                {
-                    // Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
-                }
-                else
-                {
-                    Serial.println(fbdo.errorReason());
+                    PHContent.set(fields, String(waterPH));
+                    if (Firebase.Firestore.patchDocument(&fbdo, FIREBASE_ID, "", PH_FS_path.c_str(), PHContent.raw(), epoch))
+                    {
+                        // Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+                    }
+                    else
+                    {
+                        Serial.println(fbdo.errorReason());
+                    }
                 }
             }
 

@@ -5,6 +5,8 @@
 #include "FuzzyControl.hpp"
 #include "connectionSetup.hpp"
 
+#include <random>
+
 #define PHUP 17
 #define PHDOWN 23
 #define PELT 18
@@ -19,10 +21,13 @@ bool waterAutoTemp;
 float waterMinPH;
 float waterMaxPH;
 bool waterAutoPH;
-bool getControlData = false;
 
 unsigned long sendDataPrevMillis = 0;
 unsigned long controlPrevMillis = 0;
+
+std::random_device rd;                                 // Seed for the random number engine
+std::mt19937 gen(rd());                                // Mersenne Twister 19937 generator
+std::uniform_real_distribution<float> dis(6.0f, 8.0f); // Distribution between 6 and 9
 
 void setup()
 {
@@ -36,14 +41,13 @@ void setup()
 void loop()
 {
 
-  // waterTemp = readTemperature();
-  // waterNTU = readTurbidity();
-
+  waterTemp = readTemperature();
+  waterNTU = readTurbidity();
+  waterPH = dis(gen);
 
   if (millis() - controlPrevMillis >= 15000 || controlPrevMillis == 0)
   {
     controlPrevMillis = millis();
-    getControlData = true;
     Serial.println("Control Data");
     waterMinTemp = getMinTemp();
     waterMaxTemp = getMaxTemp();
@@ -57,18 +61,16 @@ void loop()
     Serial.println(waterMinPH);
     Serial.println(waterMaxPH);
     Serial.println(waterAutoPH);
-    fuzzyControl(45, 7, waterMinTemp, waterMaxTemp, waterAutoTemp, waterMinPH, waterMaxPH, waterAutoPH);
-
   }
 
-  if (millis() - sendDataPrevMillis >= 2000 || sendDataPrevMillis == 0 && getControlData == false)
+  fuzzyControl(waterTemp, waterPH, waterMinTemp, waterMaxTemp, waterAutoTemp, waterMinPH, waterMaxPH, waterAutoPH);
+
+  if (millis() - sendDataPrevMillis >= 2000 || sendDataPrevMillis == 0)
   {
     sendDataPrevMillis = millis();
-    RTDBSend(waterTemp, waterNTU);
-    FirestoreSend(waterTemp, waterNTU);
+    RTDBSend(waterTemp, waterNTU, waterPH);
+    FirestoreSend(waterTemp, waterNTU, waterPH);
     Serial.print("Free Heap : ");
     Serial.println(ESP.getFreeHeap());
   }
-  
-  getControlData = false;
 }
