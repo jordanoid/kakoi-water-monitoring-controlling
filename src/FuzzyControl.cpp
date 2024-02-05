@@ -421,23 +421,4 @@ void fuzzyControl(float currentTemp, float currentPH, float minTemp, float maxTe
         digitalWrite(relay[1], LOW);
         phPumpRunning = false;
     }
-
-
-    // // Set output vlaue: heater
-    // analogWrite(2, g_fisOutput[0]);
-    // // Set output vlaue: peltier
-    // analogWrite(3, g_fisOutput[1]);
-    // // Set output vlaue: phup
-    // analogWrite(4, g_fisOutput[2]);
-    // // Set output vlaue: phdown
-    // analogWrite(5, g_fisOutput[3]);
-
-    // // Set output vlaue: heater
-    // Serial.println(g_fisOutput[0]);
-    // // Set output vlaue: peltier
-    // Serial.println(g_fisOutput[1]);
-    // // Set output vlaue: phup
-    // Serial.println(g_fisOutput[2]);
-    // // Set output vlaue: phdown
-    // Serial.println(g_fisOutput[3]);
 }

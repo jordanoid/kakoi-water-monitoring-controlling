@@ -19,7 +19,7 @@ void loadWiFiCredentials();
 
 void connectionSetup()
 {
-  Serial.println(preferences.begin("wifi-cred", false));
+  // Serial.println(preferences.begin("wifi-cred", false));
   SerialBT.begin(DEVICE_IDENTIFIER);
   // Serial.print("Waiting for Bluetooth device to connect for 15 seconds...");
   oledInitWaitforBT();
@@ -36,8 +36,8 @@ void connectionSetup()
   {
     // No Bluetooth device connected, proceed with usual setup.
     SerialBT.end();
-    Serial.println("No Bluetooth device connected. Opening preferences and continuing...");
-    Serial.println(preferences.begin("wifi-cred", false));
+    // Serial.println("No Bluetooth device connected. Opening preferences and continuing...");
+    // Serial.println(preferences.begin("wifi-cred", false));
     loadWiFiCredentials();
     connectToWiFi();
   }
@@ -143,7 +143,7 @@ void configureWiFiWithBluetooth()
       }
       else
       {
-        Serial.println("Invalid input format. Please enter SSID and password separated by a comma.");
+        // Serial.println("Invalid input format. Please enter SSID and password separated by a comma.");
       }
     }
   }
@@ -155,11 +155,11 @@ void loadWiFiCredentials()
   String storedSSID = preferences.getString("ssid", "");
   String storedPassword = preferences.getString("password", "");
 
-  Serial.println("Stored WiFi credentials:");
-  Serial.print("SSID: ");
-  Serial.println(storedSSID);
-  Serial.print("Password: ");
-  Serial.println(storedPassword);
+  // Serial.println("Stored WiFi credentials:");
+  // Serial.print("SSID: ");
+  // Serial.println(storedSSID);
+  // Serial.print("Password: ");
+  // Serial.println(storedPassword);
 }
 
 void waitForBluetoothConnection(unsigned long timeout)
@@ -235,7 +235,7 @@ void receiveAndStoreNewCredentials()
       }
       else
       {
-        Serial.println("Invalid input format. Please enter SSID and password separated by a comma.");
+        // Serial.println("Invalid input format. Please enter SSID and password separated by a comma.");
       }
     }
   }

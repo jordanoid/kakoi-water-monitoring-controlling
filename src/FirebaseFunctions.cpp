@@ -90,7 +90,7 @@ void RTDBSend(float waterTemp, float waterNTU, float waterPH)
         // RTDB
         if (Firebase.RTDB.setFloat(&fbdo, temp_RTDB_node.c_str(), waterTemp))
         {
-            Serial.println("PASSED");
+            // Serial.println("PASSED");
             // Serial.print("PATH: ");
             // Serial.println(fbdo.dataPath());
             // Serial.print("TYPE: ");
@@ -98,13 +98,13 @@ void RTDBSend(float waterTemp, float waterNTU, float waterPH)
         }
         else
         {
-            Serial.println("FAILED");
+            // Serial.println("FAILED");
             // Serial.print("REASON: ");
             // Serial.println(fbdo.errorReason());
         }
         if (Firebase.RTDB.setFloat(&fbdo, NTU_RTDB_node.c_str(), waterNTU))
         {
-            Serial.println("PASSED");
+            // Serial.println("PASSED");
             // Serial.print("PATH: ");
             // Serial.println(fbdo.dataPath());
             // Serial.print("TYPE: ");
@@ -112,14 +112,14 @@ void RTDBSend(float waterTemp, float waterNTU, float waterPH)
         }
         else
         {
-            Serial.println("FAILED");
+            // Serial.println("FAILED");
             // Serial.print("REASON: ");
             // Serial.println(fbdo.errorReason());
         }
 
         if (Firebase.RTDB.setFloat(&fbdo, PH_RTDB_node.c_str(), waterPH))
         {
-            Serial.println("PASSED");
+            // Serial.println("PASSED");
             // Serial.print("PATH: ");
             // Serial.println(fbdo.dataPath());
             // Serial.print("TYPE: ");
@@ -127,7 +127,7 @@ void RTDBSend(float waterTemp, float waterNTU, float waterPH)
         }
         else
         {
-            Serial.println("FAILED");
+            // Serial.println("FAILED");
             // Serial.print("REASON: ");
             // Serial.println(fbdo.errorReason());
         }
@@ -157,7 +157,7 @@ float getMaxTemp()
         }
         else
         {
-            Serial.println(fbdo.errorReason());
+            // Serial.println(fbdo.errorReason());
             return -1;
         }
     }
@@ -182,7 +182,7 @@ float getMinTemp()
         }
         else
         {
-            Serial.println(fbdo.errorReason());
+            // Serial.println(fbdo.errorReason());
             return -1;
         }
     }
@@ -206,7 +206,7 @@ bool getAutoTemp()
         }
         else
         {
-            Serial.println(fbdo.errorReason());
+            // Serial.println(fbdo.errorReason());
             return false;
         }
     }
@@ -237,7 +237,7 @@ float getMaxPH()
         }
         else
         {
-            Serial.println(fbdo.errorReason());
+            // Serial.println(fbdo.errorReason());
             return -1;
         }
     }
@@ -262,7 +262,7 @@ float getMinPH()
         }
         else
         {
-            Serial.println(fbdo.errorReason());
+            // Serial.println(fbdo.errorReason());
             return -1;
         }
     }
@@ -287,7 +287,7 @@ bool getAutoPH()
         }
         else
         {
-            Serial.println(fbdo.errorReason());
+            // Serial.println(fbdo.errorReason());
             return false;
         }
     }
@@ -327,7 +327,7 @@ void FirestoreSend(float waterTemp, float waterNTU, float waterPH)
                     }
                     else
                     {
-                        Serial.println(fbdo.errorReason());
+                        // Serial.println(fbdo.errorReason());
                     }
                 }
                 else
@@ -339,7 +339,7 @@ void FirestoreSend(float waterTemp, float waterNTU, float waterPH)
                     }
                     else
                     {
-                        Serial.println(fbdo.errorReason());
+                        // Serial.println(fbdo.errorReason());
                     }
                 }
             }
@@ -355,7 +355,7 @@ void FirestoreSend(float waterTemp, float waterNTU, float waterPH)
                     }
                     else
                     {
-                        Serial.println(fbdo.errorReason());
+                        // Serial.println(fbdo.errorReason());
                     }
                 }
                 else
@@ -367,7 +367,7 @@ void FirestoreSend(float waterTemp, float waterNTU, float waterPH)
                     }
                     else
                     {
-                        Serial.println(fbdo.errorReason());
+                        // Serial.println(fbdo.errorReason());
                     }
                 }
             }
@@ -383,7 +383,7 @@ void FirestoreSend(float waterTemp, float waterNTU, float waterPH)
                     }
                     else
                     {
-                        Serial.println(fbdo.errorReason());
+                        // Serial.println(fbdo.errorReason());
                     }
                 }
                 else
@@ -395,7 +395,7 @@ void FirestoreSend(float waterTemp, float waterNTU, float waterPH)
                     }
                     else
                     {
-                        Serial.println(fbdo.errorReason());
+                        // Serial.println(fbdo.errorReason());
                     }
                 }
             }
