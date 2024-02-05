@@ -99,8 +99,8 @@ void RTDBSend(float waterTemp, float waterNTU, float waterPH)
         else
         {
             Serial.println("FAILED");
-            Serial.print("REASON: ");
-            Serial.println(fbdo.errorReason());
+            // Serial.print("REASON: ");
+            // Serial.println(fbdo.errorReason());
         }
         if (Firebase.RTDB.setFloat(&fbdo, NTU_RTDB_node.c_str(), waterNTU))
         {
@@ -113,8 +113,8 @@ void RTDBSend(float waterTemp, float waterNTU, float waterPH)
         else
         {
             Serial.println("FAILED");
-            Serial.print("REASON: ");
-            Serial.println(fbdo.errorReason());
+            // Serial.print("REASON: ");
+            // Serial.println(fbdo.errorReason());
         }
 
         if (Firebase.RTDB.setFloat(&fbdo, PH_RTDB_node.c_str(), waterPH))
@@ -128,8 +128,8 @@ void RTDBSend(float waterTemp, float waterNTU, float waterPH)
         else
         {
             Serial.println("FAILED");
-            Serial.print("REASON: ");
-            Serial.println(fbdo.errorReason());
+            // Serial.print("REASON: ");
+            // Serial.println(fbdo.errorReason());
         }
     }
 }
@@ -323,7 +323,7 @@ void FirestoreSend(float waterTemp, float waterNTU, float waterPH)
                     tempContent.set(fields.c_str(), String(waterTemp));
                     if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str(), tempContent.raw()))
                     {
-                        Serial.printf("Temperature Document created: %s\n", temp_FS_path.c_str());
+                        // Serial.printf("Temperature Document created: %s\n", temp_FS_path.c_str());
                     }
                     else
                     {
@@ -351,7 +351,7 @@ void FirestoreSend(float waterTemp, float waterNTU, float waterPH)
                     NTUContent.set(fields.c_str(), String(waterNTU));
                     if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str(), NTUContent.raw()))
                     {
-                        Serial.printf("NTU Document created: %s\n", NTU_FS_path.c_str());
+                        // Serial.printf("NTU Document created: %s\n", NTU_FS_path.c_str());
                     }
                     else
                     {
@@ -379,7 +379,7 @@ void FirestoreSend(float waterTemp, float waterNTU, float waterPH)
                     PHContent.set(fields.c_str(), String(waterPH));
                     if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", PH_FS_path.c_str(), PHContent.raw()))
                     {
-                        Serial.printf("PH Document created: %s\n", PH_FS_path.c_str());
+                        // Serial.printf("PH Document created: %s\n", PH_FS_path.c_str());
                     }
                     else
                     {

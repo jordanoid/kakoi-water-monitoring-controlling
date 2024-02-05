@@ -4,6 +4,7 @@
 #include "SensorReadings.hpp"
 #include "FuzzyControl.hpp"
 #include "connectionSetup.hpp"
+#include "OLED.hpp"
 
 #include <random>
 
@@ -32,10 +33,11 @@ std::uniform_real_distribution<float> dis(6.0f, 8.0f); // Distribution between 6
 void setup()
 {
   Serial.begin(115200);
+  oledSetup();
   connectionSetup();
   controllerSetup();
-  sensorSetup();
   FirebaseSetup();
+  sensorSetup();
 }
 
 void loop()
@@ -43,7 +45,7 @@ void loop()
 
   waterTemp = readTemperature();
   waterNTU = readTurbidity();
-  waterPH = dis(gen);
+  waterPH = readPH();
 
   if (millis() - controlPrevMillis >= 15000 || controlPrevMillis == 0)
   {
@@ -73,4 +75,6 @@ void loop()
     Serial.print("Free Heap : ");
     Serial.println(ESP.getFreeHeap());
   }
+
+  oledMainDisplay(checkWiFiStatus(), waterAutoPH, waterAutoTemp, waterTemp, waterPH, waterNTU);
 }
