@@ -23,7 +23,7 @@ int relay[4] = {17, 23, 18, 19};
 
 unsigned long controlPreviousTime = 0;
 const unsigned long controlInterval = 60000; // 60 seconds
-const unsigned long phPumpDuration = 5000;     // 5 seconds
+const unsigned long phPumpDuration = 5000;   // 5 seconds
 bool phPumpRunning = false;
 unsigned long phPumpStartTime = 0;
 
@@ -381,7 +381,6 @@ void fuzzyControl(float currentTemp, float currentPH, float minTemp, float maxTe
             digitalWrite(relay[2], LOW);
             digitalWrite(relay[3], LOW);
         }
-
     }
     else
     {
@@ -389,34 +388,45 @@ void fuzzyControl(float currentTemp, float currentPH, float minTemp, float maxTe
         digitalWrite(relay[3], LOW);
     }
 
-    
     unsigned long currentTime = millis();
 
-    if (autoPH == 1 && (currentTime - controlPreviousTime >= controlInterval)) {
+    if (autoPH == 1 && (currentTime - controlPreviousTime >= controlInterval))
+    {
         // Update the last control time
         controlPreviousTime = currentTime;
 
         // Control
-        if (g_fisOutput[2] >= 0.5 && g_fisOutput[3] < 0.5) {
+        if (g_fisOutput[2] >= 0.5 && g_fisOutput[3] < 0.5)
+        {
             // Turn on pH up Pump
             digitalWrite(relay[0], HIGH);
             digitalWrite(relay[1], LOW);
             phPumpRunning = true;
             phPumpStartTime = currentTime;
-        } else if (g_fisOutput[3] >= 0.5 && g_fisOutput[2] < 0.5) {
+        }
+        else if (g_fisOutput[3] >= 0.5 && g_fisOutput[2] < 0.5)
+        {
             // Turn on pH downhPump
             digitalWrite(relay[0], LOW);
             digitalWrite(relay[1], HIGH);
             phPumpRunning = true;
             phPumpStartTime = currentTime;
-        } else {
+        }
+        else
+        {
             digitalWrite(relay[0], LOW);
             digitalWrite(relay[1], LOW);
         }
     }
+    else if (autoPH != 1)
+    {
+        digitalWrite(relay[0], LOW);
+        digitalWrite(relay[1], LOW);
+    }
 
     // Check if the Pump is running and the Pump duration has passed
-    if (phPumpRunning && (currentTime - phPumpStartTime >= phPumpDuration)) {
+    if (phPumpRunning && (currentTime - phPumpStartTime >= phPumpDuration))
+    {
         digitalWrite(relay[0], LOW);
         digitalWrite(relay[1], LOW);
         phPumpRunning = false;
