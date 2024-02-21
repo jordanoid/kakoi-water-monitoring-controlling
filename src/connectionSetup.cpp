@@ -1,9 +1,9 @@
 #include "ConnectionSetup.hpp"
 #include <WiFi.h>
-#include <BluetoothSerial.h>
 #include <Preferences.h>
 #include "deviceUID.hpp"
 #include "OLED.hpp"
+#include <BluetoothSerial.h>
 
 const long wifiTimeout = 15000;
 unsigned long startTime;
@@ -19,15 +19,13 @@ void loadWiFiCredentials();
 
 void connectionSetup()
 {
-  // Serial.println(preferences.begin("wifi-cred", false));
+  preferences.begin("wifi-cred", false);
   SerialBT.begin(DEVICE_IDENTIFIER);
-  // Serial.print("Waiting for Bluetooth device to connect for 15 seconds...");
   oledInitWaitforBT();
   waitForBluetoothConnection(wifiTimeout);
   if (SerialBT.connected())
   {
     // A Bluetooth device is connected, receive and store new credentials.
-    // Serial.println("Bluetooth device connected. Receiving new credentials...");
     oledBTConnected();
     receiveAndStoreNewCredentials();
     SerialBT.end();
@@ -36,8 +34,6 @@ void connectionSetup()
   {
     // No Bluetooth device connected, proceed with usual setup.
     SerialBT.end();
-    // Serial.println("No Bluetooth device connected. Opening preferences and continuing...");
-    // Serial.println(preferences.begin("wifi-cred", false));
     loadWiFiCredentials();
     connectToWiFi();
   }
@@ -52,17 +48,14 @@ void connectToWiFi()
   while (WiFi.status() != WL_CONNECTED && millis() - startTime < wifiTimeout)
   {
     delay(500);
-    // Serial.println("Connecting to WiFi...");
   }
   if (WiFi.status() == WL_CONNECTED)
   {
-    // Serial.println("Connected to WiFi");
     oledWiFiConnected();
     delay(3000);
   }
   else
   {
-    // Serial.println("Failed to connect to WiFi. Starting Bluetooth configuration.");
     oledWiFiFailed();
     delay(3000);
     oledWaitforBT();
@@ -97,11 +90,6 @@ void configureWiFiWithBluetooth()
 
         preferences.putString("ssid", newSSID.c_str());
         preferences.putString("password", newPassword.c_str());
-        // Serial.println("New WiFi credentials received.");
-        // Serial.print("SSID: ");
-        // Serial.println(preferences.getString("ssid", ""));
-        // Serial.print("Password: ");
-        // Serial.println(preferences.getString("password", ""));
 
         // Attempt to connect with the new credentials
         WiFi.begin(newSSID.c_str(), newPassword.c_str());
@@ -110,14 +98,12 @@ void configureWiFiWithBluetooth()
         while (WiFi.status() != WL_CONNECTED && millis() - startTime < wifiTimeout)
         {
           delay(500);
-          // Serial.println("Connecting to WiFi with new credentials...");
         }
 
         if (WiFi.status() == WL_CONNECTED)
         {
           SerialBT.println("connected");
           delay(500);
-          // Serial.println("Connected to WiFi with new credentials");
           oledWiFiConnected();
           delay(3000);
           SerialBT.end();
@@ -126,24 +112,17 @@ void configureWiFiWithBluetooth()
         else
         {
           oledWiFiFailedInsertNew();
-          // Serial.println("Failed to connect to WiFi with new credentials. Retrying...");
           SerialBT.println("not-connected");
           attempts++;
         }
 
-        // Retry up to 3 times (adjust as needed)
         if (attempts >= 3)
         {
-          // Serial.println("Max retry attempts reached. Please try again later.");
           oledWiFiLimit();
           delay(3000);
           SerialBT.end();
           break;
         }
-      }
-      else
-      {
-        // Serial.println("Invalid input format. Please enter SSID and password separated by a comma.");
       }
     }
   }
@@ -155,17 +134,11 @@ void loadWiFiCredentials()
   String storedSSID = preferences.getString("ssid", "");
   String storedPassword = preferences.getString("password", "");
 
-  // Serial.println("Stored WiFi credentials:");
-  // Serial.print("SSID: ");
-  // Serial.println(storedSSID);
-  // Serial.print("Password: ");
-  // Serial.println(storedPassword);
 }
 
 void waitForBluetoothConnection(unsigned long timeout)
 {
   unsigned long startTime = millis();
-  // Wait until a Bluetooth device is connected or the timeout is reached.
   while (!SerialBT.connected() && millis() - startTime < timeout)
   {
     delay(500);
@@ -191,11 +164,6 @@ void receiveAndStoreNewCredentials()
         preferences.putString("ssid", newSSID.c_str());
         preferences.putString("password", newPassword.c_str());
 
-        // Serial.println("New WiFi credentials received.");
-        // Serial.print("SSID: ");
-        // Serial.println(preferences.getString("ssid", ""));
-        // Serial.print("Password: ");
-        // Serial.println(preferences.getString("password", ""));
 
         // Attempt to connect with the new credentials
         WiFi.begin(newSSID.c_str(), newPassword.c_str());
@@ -204,14 +172,12 @@ void receiveAndStoreNewCredentials()
         while (WiFi.status() != WL_CONNECTED && millis() - startTime < wifiTimeout)
         {
           delay(500);
-          // Serial.println("Connecting to WiFi with new credentials...");
         }
 
         if (WiFi.status() == WL_CONNECTED)
         {
           SerialBT.println("connected");
           delay(500);
-          // Serial.println("Connected to WiFi with new credentials");
           oledWiFiConnected();
           SerialBT.end();
           delay(3000);
@@ -219,7 +185,6 @@ void receiveAndStoreNewCredentials()
         }
         else
         {
-          // Serial.println("Failed to connect to WiFi with new credentials. Retrying...");
           SerialBT.println("not-connected");
           oledWiFiFailedInsertNew();
           attempts++;
@@ -228,14 +193,12 @@ void receiveAndStoreNewCredentials()
         // Retry up to 3 times (adjust as needed)
         if (attempts >= 3)
         {
-          // Serial.println("Max retry attempts reached. Please try again later.");
           oledWiFiLimit();
           break;
         }
       }
       else
       {
-        // Serial.println("Invalid input format. Please enter SSID and password separated by a comma.");
       }
     }
   }

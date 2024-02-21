@@ -23,7 +23,7 @@ int relay[4] = {17, 23, 18, 19};
 
 unsigned long controlPreviousTime = 0;
 const unsigned long controlInterval = 60000; // 60 seconds
-const unsigned long phPumpDuration = 5000;   // 5 seconds
+const unsigned long phPumpDuration = 2500;   // 5 seconds
 bool phPumpRunning = false;
 unsigned long phPumpStartTime = 0;
 
@@ -286,9 +286,8 @@ void controllerSetup()
     for (int i = 0; i < 4; i++)
     {
         digitalWrite(relay[i], HIGH);
-        delay(1000);
+        delay(100);
     }
-    delay(500);
     for (int i = 0; i < 4; i++)
     {
         digitalWrite(relay[i], LOW);
@@ -338,27 +337,27 @@ void fuzzyControl(float currentTemp, float currentPH, float minTemp, float maxTe
     if (minPH != -1 && maxPH != -1)
     {
         fis_gMFI1Coeff1[2] = minPH;
-        fis_gMFI1Coeff1[3] = minPH + 0.5;
+        fis_gMFI1Coeff1[3] = minPH + 0.2;
 
         fis_gMFI1Coeff2[0] = minPH;
-        fis_gMFI1Coeff2[1] = minPH + 0.5;
-        fis_gMFI1Coeff2[2] = maxPH - 0.5;
+        fis_gMFI1Coeff2[1] = minPH + 0.2;
+        fis_gMFI1Coeff2[2] = maxPH - 0.2;
         fis_gMFI1Coeff2[3] = maxPH;
 
-        fis_gMFI1Coeff3[0] = maxPH - 0.5;
+        fis_gMFI1Coeff3[0] = maxPH - 0.2;
         fis_gMFI1Coeff3[1] = maxPH;
     }
     else
     {
         fis_gMFI1Coeff1[2] = 6.5;
-        fis_gMFI1Coeff1[3] = 7;
+        fis_gMFI1Coeff1[3] = 6.7;
 
         fis_gMFI1Coeff2[0] = 6.5;
-        fis_gMFI1Coeff2[1] = 7;
-        fis_gMFI1Coeff2[2] = 7.5;
+        fis_gMFI1Coeff2[1] = 6.7;
+        fis_gMFI1Coeff2[2] = 7.8;
         fis_gMFI1Coeff2[3] = 8;
 
-        fis_gMFI1Coeff3[0] = 7.5;
+        fis_gMFI1Coeff3[0] = 7.8;
         fis_gMFI1Coeff3[1] = 8;
     }
 
@@ -390,7 +389,7 @@ void fuzzyControl(float currentTemp, float currentPH, float minTemp, float maxTe
 
     unsigned long currentTime = millis();
 
-    if (autoPH == 1 && (currentTime - controlPreviousTime >= controlInterval))
+    if (autoPH == 1 && (currentTime - controlPreviousTime >= controlInterval) ||  controlPreviousTime == 0)
     {
         // Update the last control time
         controlPreviousTime = currentTime;

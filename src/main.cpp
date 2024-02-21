@@ -24,6 +24,47 @@ bool waterAutoPH;
 unsigned long sendDataPrevMillis = 0;
 unsigned long controlPrevMillis = 0;
 
+TaskHandle_t controllerTask, firebaseTask;
+SemaphoreHandle_t flag;
+
+void controllerLoop(void *parameter)
+{
+  for (;;)
+  {
+    xSemaphoreTake(flag, portMAX_DELAY);
+    waterTemp = readTemperature();
+    waterNTU = readTurbidity();
+    waterPH = readPH();
+    fuzzyControl(waterTemp, waterPH, waterMinTemp, waterMaxTemp, waterAutoTemp, waterMinPH, waterMaxPH, waterAutoPH);
+    oledMainDisplay(checkWiFiStatus(), waterAutoPH, waterAutoTemp, waterTemp, waterPH, waterNTU);
+    xSemaphoreGive(flag);
+  }
+}
+
+void firebaseLoop(void *parameter)
+{
+  for (;;)
+  {
+    if (millis() - controlPrevMillis >= 5000 || controlPrevMillis == 0)
+    {
+      controlPrevMillis = millis();
+      waterMinTemp = getMinTemp();
+      waterMaxTemp = getMaxTemp();
+      waterAutoTemp = getAutoTemp();
+      waterMinPH = getMinPH();
+      waterMaxPH = getMaxPH();
+      waterAutoPH = getAutoPH();
+    }
+
+    if (millis() - sendDataPrevMillis >= 2000 || sendDataPrevMillis == 0)
+    {
+      sendDataPrevMillis = millis();
+      RTDBSend(waterTemp, waterNTU, waterPH);
+      FirestoreSend(waterTemp, waterNTU, waterPH);
+    }
+  }
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -31,35 +72,33 @@ void setup()
   connectionSetup();
   controllerSetup();
   FirebaseSetup();
+
+  waterMinTemp = getMinTemp();
+  waterMaxTemp = getMaxTemp();
+  waterAutoTemp = getAutoTemp();
+  waterMinPH = getMinPH();
+  waterMaxPH = getMaxPH();
+  waterAutoPH = getAutoPH();
+
   sensorSetup();
+  flag = xSemaphoreCreateMutex();
+  xTaskCreatePinnedToCore(
+      controllerLoop,
+      "ControllerTask",
+      8192,
+      NULL,
+      1,
+      &controllerTask,
+      0);
+
+  xTaskCreatePinnedToCore(
+      firebaseLoop,
+      "FirebaseTask",
+      8192,
+      NULL,
+      1,
+      &firebaseTask,
+      1);
 }
 
-void loop()
-{
-
-  waterTemp = readTemperature();
-  waterNTU = readTurbidity();
-  waterPH = readPH();
-
-  if (millis() - controlPrevMillis >= 15000 || controlPrevMillis == 0)
-  {
-    controlPrevMillis = millis();
-    waterMinTemp = getMinTemp();
-    waterMaxTemp = getMaxTemp();
-    waterAutoTemp = getAutoTemp();
-    waterMinPH = getMinPH();
-    waterMaxPH = getMaxPH();
-    waterAutoPH = getAutoPH();
-  }
-
-  fuzzyControl(waterTemp, waterPH, waterMinTemp, waterMaxTemp, waterAutoTemp, waterMinPH, waterMaxPH, waterAutoPH);
-
-  if (millis() - sendDataPrevMillis >= 2000 || sendDataPrevMillis == 0)
-  {
-    sendDataPrevMillis = millis();
-    RTDBSend(waterTemp, waterNTU, waterPH);
-    FirestoreSend(waterTemp, waterNTU, waterPH);
-  }
-
-  oledMainDisplay(checkWiFiStatus(), waterAutoPH, waterAutoTemp, waterTemp, waterPH, waterNTU);
-}
+void loop() {}

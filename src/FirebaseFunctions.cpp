@@ -40,6 +40,8 @@ String PHControl_RTDB_node = DEVICE_UID + "/auto_PH";
 String minPH_RTDB_node = DEVICE_UID + "/PH_min";
 String maxPH_RTDB_node = DEVICE_UID + "/PH_max";
 
+String timestamp_RTDB_node = DEVICE_UID + "/last_updated";
+
 FirebaseJson tempContent;
 FirebaseJson PHContent;
 FirebaseJson NTUContent;
@@ -82,55 +84,16 @@ RTDB Send Function
 
 void RTDBSend(float waterTemp, float waterNTU, float waterPH)
 {
-    // if (Firebase.ready() && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0))
+    timeClient.update();
+    String timestamp = String(timeClient.getEpochTime());
+
     if (Firebase.ready())
     {
-        // sendDataPrevMillis = millis();
-
         // RTDB
-        if (Firebase.RTDB.setFloat(&fbdo, temp_RTDB_node.c_str(), waterTemp))
-        {
-            // Serial.println("PASSED");
-            // Serial.print("PATH: ");
-            // Serial.println(fbdo.dataPath());
-            // Serial.print("TYPE: ");
-            // Serial.println(fbdo.dataType());
-        }
-        else
-        {
-            // Serial.println("FAILED");
-            // Serial.print("REASON: ");
-            // Serial.println(fbdo.errorReason());
-        }
-        if (Firebase.RTDB.setFloat(&fbdo, NTU_RTDB_node.c_str(), waterNTU))
-        {
-            // Serial.println("PASSED");
-            // Serial.print("PATH: ");
-            // Serial.println(fbdo.dataPath());
-            // Serial.print("TYPE: ");
-            // Serial.println(fbdo.dataType());
-        }
-        else
-        {
-            // Serial.println("FAILED");
-            // Serial.print("REASON: ");
-            // Serial.println(fbdo.errorReason());
-        }
-
-        if (Firebase.RTDB.setFloat(&fbdo, PH_RTDB_node.c_str(), waterPH))
-        {
-            // Serial.println("PASSED");
-            // Serial.print("PATH: ");
-            // Serial.println(fbdo.dataPath());
-            // Serial.print("TYPE: ");
-            // Serial.println(fbdo.dataType());
-        }
-        else
-        {
-            // Serial.println("FAILED");
-            // Serial.print("REASON: ");
-            // Serial.println(fbdo.errorReason());
-        }
+        Firebase.RTDB.setFloat(&fbdo, temp_RTDB_node.c_str(), waterTemp);
+        Firebase.RTDB.setFloat(&fbdo, NTU_RTDB_node.c_str(), waterNTU);
+        Firebase.RTDB.setFloat(&fbdo, PH_RTDB_node.c_str(), waterPH);
+        Firebase.RTDB.setString(&fbdo, timestamp_RTDB_node.c_str(), timestamp);
     }
 }
 
@@ -157,7 +120,6 @@ float getMaxTemp()
         }
         else
         {
-            // Serial.println(fbdo.errorReason());
             return -1;
         }
     }
@@ -182,7 +144,6 @@ float getMinTemp()
         }
         else
         {
-            // Serial.println(fbdo.errorReason());
             return -1;
         }
     }
@@ -206,7 +167,6 @@ bool getAutoTemp()
         }
         else
         {
-            // Serial.println(fbdo.errorReason());
             return false;
         }
     }
@@ -237,7 +197,6 @@ float getMaxPH()
         }
         else
         {
-            // Serial.println(fbdo.errorReason());
             return -1;
         }
     }
@@ -262,7 +221,6 @@ float getMinPH()
         }
         else
         {
-            // Serial.println(fbdo.errorReason());
             return -1;
         }
     }
@@ -287,7 +245,6 @@ bool getAutoPH()
         }
         else
         {
-            // Serial.println(fbdo.errorReason());
             return false;
         }
     }
@@ -314,95 +271,53 @@ void FirestoreSend(float waterTemp, float waterNTU, float waterPH)
         tempContent.clear();
         PHContent.clear();
         NTUContent.clear();
-        if (FirestoreState == false && (timeClient.getMinutes() == 0))
+        if (FirestoreState == false && (timeClient.getMinutes() % 5 == 0))
         {
             if (waterTemp != -1)
             {
                 if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str()))
                 {
                     tempContent.set(fields.c_str(), String(waterTemp));
-                    if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str(), tempContent.raw()))
-                    {
-                        // Serial.printf("Temperature Document created: %s\n", temp_FS_path.c_str());
-                    }
-                    else
-                    {
-                        // Serial.println(fbdo.errorReason());
-                    }
+                    Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str(), tempContent.raw());
                 }
                 else
                 {
                     tempContent.set(fields, String(waterTemp));
-                    if (Firebase.Firestore.patchDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str(), tempContent.raw(), epoch))
-                    {
-                        // Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
-                    }
-                    else
-                    {
-                        // Serial.println(fbdo.errorReason());
-                    }
+                    Firebase.Firestore.patchDocument(&fbdo, FIREBASE_ID, "", temp_FS_path.c_str(), tempContent.raw(), epoch);
                 }
             }
-
             if (waterNTU != -1)
             {
                 if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str()))
                 {
                     NTUContent.set(fields.c_str(), String(waterNTU));
-                    if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str(), NTUContent.raw()))
-                    {
-                        // Serial.printf("NTU Document created: %s\n", NTU_FS_path.c_str());
-                    }
-                    else
-                    {
-                        // Serial.println(fbdo.errorReason());
-                    }
+                    Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str(), NTUContent.raw());
                 }
                 else
                 {
                     NTUContent.set(fields, String(waterNTU));
-                    if (Firebase.Firestore.patchDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str(), NTUContent.raw(), epoch))
-                    {
-                        // Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
-                    }
-                    else
-                    {
-                        // Serial.println(fbdo.errorReason());
-                    }
+                    Firebase.Firestore.patchDocument(&fbdo, FIREBASE_ID, "", NTU_FS_path.c_str(), NTUContent.raw(), epoch);
                 }
             }
 
-            if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_ID, "", PH_FS_path.c_str()))
+            if (waterPH != -1)
             {
-                if (waterPH != -1)
+                if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_ID, "", PH_FS_path.c_str()))
                 {
+
                     PHContent.set(fields.c_str(), String(waterPH));
-                    if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", PH_FS_path.c_str(), PHContent.raw()))
-                    {
-                        // Serial.printf("PH Document created: %s\n", PH_FS_path.c_str());
-                    }
-                    else
-                    {
-                        // Serial.println(fbdo.errorReason());
-                    }
+                    Firebase.Firestore.createDocument(&fbdo, FIREBASE_ID, "", PH_FS_path.c_str(), PHContent.raw());
                 }
                 else
                 {
                     PHContent.set(fields, String(waterPH));
-                    if (Firebase.Firestore.patchDocument(&fbdo, FIREBASE_ID, "", PH_FS_path.c_str(), PHContent.raw(), epoch))
-                    {
-                        // Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
-                    }
-                    else
-                    {
-                        // Serial.println(fbdo.errorReason());
-                    }
+                    Firebase.Firestore.patchDocument(&fbdo, FIREBASE_ID, "", PH_FS_path.c_str(), PHContent.raw(), epoch);
                 }
             }
 
             FirestoreState = true;
         }
-        else if (timeClient.getMinutes() == 1)
+        else if (timeClient.getMinutes() % 5 != 0)
         {
             FirestoreState = false;
         }
