@@ -7,4 +7,4 @@ float readTurbidity();
 float readPH();
 void sensorSetup();
 
-#endif  // SENSOR_READINGS_H
+#endif

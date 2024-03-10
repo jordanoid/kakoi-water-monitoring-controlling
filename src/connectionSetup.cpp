@@ -197,9 +197,6 @@ void receiveAndStoreNewCredentials()
           break;
         }
       }
-      else
-      {
-      }
     }
   }
 }
